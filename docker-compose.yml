@@ -115,8 +115,8 @@ services:
       - ./files/nginx/odk.conf.template:/usr/share/odk/nginx/odk.conf.template:ro
       - ./files/nginx/client-config.json.template:/usr/share/odk/nginx/client-config.json.template:ro
     ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
+      - "${SYSADMIN_BIND_IP:-0.0.0.0}:80:80"
+      - "${SYSADMIN_BIND_IP:-0.0.0.0}:443:443"
     healthcheck:
       test: [ "CMD-SHELL", "nc -z localhost 80 || exit 1" ]
     restart: always
