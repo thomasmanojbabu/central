@@ -118,9 +118,9 @@ services:
     networks:
       - default
       - dokploy-network
-    ports:
-      - "${SYSADMIN_BIND_IP:-0.0.0.0}:80:80"
-      - "${SYSADMIN_BIND_IP:-0.0.0.0}:443:443"
+   # ports:
+   #  - "${SYSADMIN_BIND_IP:-0.0.0.0}:80:80"
+   #  - "${SYSADMIN_BIND_IP:-0.0.0.0}:443:443"
     healthcheck:
       test: [ "CMD-SHELL", "nc -z localhost 80 || exit 1" ]
     restart: always
@@ -176,3 +176,6 @@ volumes:
   postgres14:
   enketo_redis_main:
   enketo_redis_cache:
+networks:
+  dokploy-network:
+    external: true
