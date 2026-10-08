@@ -45,6 +45,9 @@ services:
       - mail
       - pyxform
       - enketo
+    networks:
+      - default
+      - dokploy-network
     volumes:
       - secrets:/etc/secrets
     env_file:
@@ -95,6 +98,9 @@ services:
     build:
       context: .
       dockerfile: nginx.dockerfile
+      networks:
+      - default
+      - dokploy-network
       args:
         FRONTEND_BUILD_MODE: ${FRONTEND_BUILD_MODE:-fetch}
         FRONTEND_VERSION: v2026.2.2
@@ -131,6 +137,9 @@ services:
   pyxform:
     image: 'ghcr.io/getodk/pyxform-http:v4.5.0'
     restart: always
+    networks:
+      - default
+      - dokploy-network
   secrets:
     volumes:
       - secrets:/etc/secrets
