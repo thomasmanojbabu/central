@@ -11,6 +11,9 @@ services:
       POSTGRES_PASSWORD: odk
       POSTGRES_DB: odk
     restart: always
+    networks:
+      - default
+
   postgres:
     # This service upgrades from postgres 9.6 to 14.
     # The legacy name must be maintained to allow access to the anonymous volume.
@@ -27,6 +30,9 @@ services:
       POSTGRES_INITDB_ARGS: -U odk
       POSTGRES_PASSWORD: odk
       POSTGRES_DB: odk
+    networks:
+      - default
+
   mail:
     image: "registry.gitlab.com/egos-tech/smtp:1.2.8"
     volumes:
@@ -35,6 +41,9 @@ services:
       - MAILNAME=${DOMAIN}
       - DKIM_KEY_PATH=/etc/exim4/dkim.key.temp
     restart: always
+    networks:
+      - default
+
   service:
     build:
       context: .
@@ -45,9 +54,6 @@ services:
       - mail
       - pyxform
       - enketo
-    networks:
-      - default
-      - dokploy-network
     volumes:
       - secrets:/etc/secrets
     env_file:
@@ -58,16 +64,11 @@ services:
       - HTTPS_PORT=${HTTPS_PORT:-443}
       - NODE_OPTIONS=${SERVICE_NODE_OPTIONS:-}
       # Prepare libpq connection env vars, while handling legacy DB_* vars.
-      # Resolution order:
-      # 1. PGVAR specified in .env. This includes declarations with empty values, for instance, to use an empty password (PGPASSWORD=).
-      # 2. Corresponding legacy DB_VAR in .env. These are legacy overrides for custom database connections.
-      # 3. ODK default value.
       - PGHOST=${PGHOST-${DB_HOST:-postgres14}}
       - PGDATABASE=${PGDATABASE-${DB_NAME:-odk}}
       - PGUSER=${PGUSER-${DB_USER:-odk}}
       - PGPASSWORD=${PGPASSWORD-${DB_PASSWORD:-odk}}
       - PGAPPNAME=${PGAPPNAME-odkcentral}
-      # End of libpq connection env var preparation.
       - DB_SSL=${DB_SSL:-null}
       - DB_POOL_SIZE=${DB_POOL_SIZE:-10}
       - EMAIL_FROM=${EMAIL_FROM:-no-reply@$DOMAIN}
@@ -94,13 +95,14 @@ services:
     restart: always
     logging:
       driver: local
+    networks:
+      - default
+      - dokploy-network
+
   nginx:
     build:
       context: .
       dockerfile: nginx.dockerfile
-      networks:
-      - default
-      - dokploy-network
       args:
         FRONTEND_BUILD_MODE: ${FRONTEND_BUILD_MODE:-fetch}
         FRONTEND_VERSION: v2026.2.2
@@ -110,7 +112,7 @@ services:
     environment:
       - DOMAIN=${DOMAIN}
       - CERTBOT_EMAIL=${SYSADMIN_EMAIL}
-      - SSL_TYPE=${SSL_TYPE:-letsencrypt}
+      - SSL_TYPE=${SSL_TYPE:-custom}
       - SENTRY_ORG_SUBDOMAIN=${SENTRY_ORG_SUBDOMAIN:-o130137}
       - SENTRY_KEY=${SENTRY_KEY:-3cf75f54983e473da6bd07daddf0d2ee}
       - SENTRY_PROJECT=${SENTRY_PROJECT:-1298632}
@@ -120,13 +122,9 @@ services:
       - ./files/local/customssl/:/etc/customssl/live/local/:ro
       - ./files/nginx/odk.conf.template:/usr/share/odk/nginx/odk.conf.template:ro
       - ./files/nginx/client-config.json.template:/usr/share/odk/nginx/client-config.json.template:ro
-    # ports section removed so Traefik handles ports 80/443
     networks:
       - default
       - dokploy-network
-   # ports:
-   #  - "${SYSADMIN_BIND_IP:-0.0.0.0}:80:80"
-   #  - "${SYSADMIN_BIND_IP:-0.0.0.0}:443:443"
     healthcheck:
       test: [ "CMD-SHELL", "nc -z localhost 80 || exit 1" ]
     restart: always
@@ -134,12 +132,14 @@ services:
       driver: local
       options:
         max-file: "30"
+
   pyxform:
     image: 'ghcr.io/getodk/pyxform-http:v4.5.0'
     restart: always
     networks:
       - default
       - dokploy-network
+
   secrets:
     volumes:
       - secrets:/etc/secrets
@@ -147,6 +147,9 @@ services:
       context: .
       dockerfile: secrets.dockerfile
     command: './generate-secrets.sh'
+    networks:
+      - default
+
   enketo:
     volumes:
       - secrets:/etc/secrets
@@ -162,6 +165,9 @@ services:
       - DOMAIN=${DOMAIN}
       - SUPPORT_EMAIL=${SYSADMIN_EMAIL}
       - HTTPS_PORT=${HTTPS_PORT:-443}
+    networks:
+      - default
+
   enketo_redis_main:
     image: redis:8.6.4
     volumes:
@@ -171,6 +177,9 @@ services:
       - redis-server
       - /usr/local/etc/redis/redis.conf
     restart: always
+    networks:
+      - default
+
   enketo_redis_cache:
     image: redis:8.6.4
     volumes:
@@ -180,11 +189,15 @@ services:
       - redis-server
       - /usr/local/etc/redis/redis.conf
     restart: always
+    networks:
+      - default
+
 volumes:
   secrets:
   postgres14:
   enketo_redis_main:
   enketo_redis_cache:
+
 networks:
   dokploy-network:
     external: true
